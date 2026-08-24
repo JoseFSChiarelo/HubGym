@@ -1,0 +1,229 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  PERSONAL
+  ATHLETE
+}
+
+enum PlanStatus {
+  ACTIVE
+  LATE
+  PENDING
+}
+
+enum PaymentStatus {
+  PAID
+  PENDING
+  OVERDUE
+}
+
+enum PaymentMethod {
+  PIX
+  DINHEIRO
+  CARTAO
+}
+
+enum FormFieldType {
+  TEXT
+  NUMBER
+  BOOLEAN
+  MULTIPLE_CHOICE
+}
+
+enum FormRequestStatus {
+  PENDING
+  RESPONDED
+}
+
+model User {
+  id           String           @id @default(cuid())
+  email        String           @unique
+  passwordHash String
+  role         Role
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  personal     PersonalProfile?
+  athlete      Athlete?
+}
+
+model PersonalProfile {
+  id         String        @id @default(cuid())
+  userId     String        @unique
+  name       String
+  phone      String?
+  cpf        String?       @unique
+  cref       String?       @unique
+  planStatus PlanStatus    @default(PENDING)
+  planId     String?
+  plan       Plan?         @relation(fields: [planId], references: [id])
+  payments   Payment[]
+  athletePayments AthletePayment[]
+  user       User          @relation(fields: [userId], references: [id])
+  athletes   Athlete[]
+  trainings  Training[]
+  forms      Form[]
+  notices    Notice[]
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+}
+
+model Plan {
+  id          String             @id @default(cuid())
+  name        String
+  price       Float
+  description String?
+  personals   PersonalProfile[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model Payment {
+  id         String         @id @default(cuid())
+  personalId String
+  amount     Float
+  status     PaymentStatus  @default(PENDING)
+  paidAt     DateTime?
+  dueDate    DateTime
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  personal   PersonalProfile @relation(fields: [personalId], references: [id])
+}
+
+model AthletePayment {
+  id            String         @id @default(cuid())
+  athleteId     String
+  personalId    String
+  amount        Float
+  status        PaymentStatus  @default(PENDING)
+  paidAt        DateTime?
+  dueDate       DateTime
+  paymentMethod PaymentMethod?
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  athlete       Athlete        @relation(fields: [athleteId], references: [id])
+  personal      PersonalProfile @relation(fields: [personalId], references: [id])
+
+  @@index([athleteId, dueDate])
+  @@index([personalId, dueDate])
+}
+
+model Config {
+  id            Int      @id @default(1)
+  companyName   String?
+  supportEmail  String?
+  defaultPlan   Float?
+  terms         String?
+  updatedAt     DateTime @updatedAt
+  @@unique([id])
+}
+
+model Athlete {
+  id             String          @id @default(cuid())
+  userId         String          @unique
+  personalId     String
+  name           String
+  age            Int?
+  document       String?         @unique
+  phone          String?
+  cep            String?
+  paymentMethod  PaymentMethod?
+  avatarUrl      String?
+  weeklySchedule Json?
+  blockTrainerTrainings Boolean        @default(false)
+  user           User            @relation(fields: [userId], references: [id])
+  personal       PersonalProfile @relation(fields: [personalId], references: [id])
+  trainings      Training[]
+  responses      FormResponse[]
+  requests       FormRequest[]
+  payments       AthletePayment[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model Training {
+  id         String          @id @default(cuid())
+  personalId String
+  athleteId  String?
+  title      String
+  notes      String?
+  exercises  Json
+  personal   PersonalProfile @relation(fields: [personalId], references: [id])
+  athlete    Athlete?        @relation(fields: [athleteId], references: [id])
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+}
+
+model Notice {
+  id         String          @id @default(cuid())
+  personalId String
+  title      String?
+  message    String
+  personal   PersonalProfile @relation(fields: [personalId], references: [id])
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+}
+
+model Form {
+  id          String          @id @default(cuid())
+  personalId  String
+  title       String
+  description String?
+  personal    PersonalProfile @relation(fields: [personalId], references: [id])
+  fields      FormField[]
+  requests    FormRequest[]
+  responses   FormResponse[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model FormField {
+  id        String        @id @default(cuid())
+  formId    String
+  label     String
+  type      FormFieldType
+  required  Boolean       @default(true)
+  options   String[]      @default([])
+  form      Form          @relation(fields: [formId], references: [id])
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+model FormRequest {
+  id         String             @id @default(cuid())
+  formId     String
+  athleteId  String
+  status     FormRequestStatus  @default(PENDING)
+  respondedAt DateTime?
+  form       Form               @relation(fields: [formId], references: [id])
+  athlete    Athlete            @relation(fields: [athleteId], references: [id])
+  response   FormResponse?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+}
+
+model FormResponse {
+  id         String      @id @default(cuid())
+  formId     String
+  athleteId  String
+  requestId  String?     @unique
+  answers    Json
+  form       Form        @relation(fields: [formId], references: [id])
+  athlete    Athlete     @relation(fields: [athleteId], references: [id])
+  request    FormRequest? @relation(fields: [requestId], references: [id])
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}

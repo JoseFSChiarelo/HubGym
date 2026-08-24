@@ -1,0 +1,9 @@
+node_modules
+dist
+.env
+backend/.env
+admin-frontend/.env
+backend/node_modules
+backend/dist
+admin-frontend/node_modules
+admin-frontend/dist

@@ -1,0 +1,44 @@
+{
+  "name": "admin-desktop",
+  "version": "1.0.0",
+  "description": "Electron wrapper para o painel admin",
+  "main": "main.js",
+  "scripts": {
+    "dev:renderer": "cd ../admin-frontend && cross-env VITE_CLIENT_TARGET=web npm run dev -- --host 127.0.0.1 --port 5173",
+    "dev:electron": "cross-env ELECTRON_START_URL=http://localhost:5173 wait-on http://localhost:5173 && electron .",
+    "dev": "concurrently -k \"npm:dev:renderer\" \"npm:dev:electron\"",
+    "build:renderer": "cd ../admin-frontend && cross-env VITE_CLIENT_TARGET=web npm run build",
+    "copy:renderer": "node scripts/copy-renderer.js",
+    "build": "npm run build:renderer && npm run copy:renderer",
+    "dist": "npm run build && electron-builder",
+    "start": "npm run build && electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^39.2.7",
+    "wait-on": "^9.0.3"
+  },
+  "devDependencies": {
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.hubgym.admin",
+    "productName": "HubGym Admin",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "renderer/**/*"
+    ],
+    "asar": true,
+    "win": {
+      "target": "nsis"
+    }
+  }
+}
